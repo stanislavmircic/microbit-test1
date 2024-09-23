@@ -97,8 +97,8 @@ namespace neurobit {
     //% block="StartRecordingEMG"
     export function startRecordingEMG(): void {
         signalType = Signal.EMG;
-        pins.digitalWritePin(DigitalPin.P5, 0)
-        pins.digitalWritePin(DigitalPin.P6, 0)
+        pins.digitalWritePin(DigitalPin.P8, 1)
+        pins.digitalWritePin(DigitalPin.P9, 1)
         if (notInitialized) {
             control.inBackground(() => {
                 backgroundTask()
@@ -116,8 +116,8 @@ namespace neurobit {
     //% block="StartRecordingECG"
     export function startRecordingECG(): void {
         signalType = Signal.ECG;
-        pins.digitalWritePin(DigitalPin.P5, 0)
-        pins.digitalWritePin(DigitalPin.P6, 0)
+        pins.digitalWritePin(DigitalPin.P8, 0)
+        pins.digitalWritePin(DigitalPin.P9, 1)
         if (notInitialized) {
             control.inBackground(() => {
                 backgroundTask()
@@ -134,8 +134,8 @@ namespace neurobit {
     //% block="StartRecordingEEG"
     export function startRecordingEEG(): void {
         signalType = Signal.EEG;
-        pins.digitalWritePin(DigitalPin.P5, 0)
-        pins.digitalWritePin(DigitalPin.P6, 0)
+        pins.digitalWritePin(DigitalPin.P8, 0)
+        pins.digitalWritePin(DigitalPin.P9, 0)
         if (notInitialized) {
             control.inBackground(() => {
                 backgroundTask()
