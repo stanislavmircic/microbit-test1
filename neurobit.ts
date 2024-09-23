@@ -86,30 +86,13 @@ namespace neurobit {
         }
     }
 
-    /**
-     * Start recording EEG signal
-     */
 
-    //% group="Signal"
-    //% weight=46 
-    //% block="StartRecordingEEG"
-    export function startRecordingEEG(): void {
-        signalType = Signal.EEG;
-        pins.digitalWritePin(DigitalPin.P5, 0)
-        pins.digitalWritePin(DigitalPin.P6, 0)
-        if (notInitialized)
-        {
-            control.inBackground(() => {
-                backgroundTask()
-            })
-        }
-    }
 
     /**
      * Start recording EMG signal 
      */
 
-    //% group="Signal"
+    //% group="Initialization"
     //% weight=45 
     //% block="StartRecordingEMG"
     export function startRecordingEMG(): void {
@@ -128,7 +111,7 @@ namespace neurobit {
      * Start recording ECG signal
      */
 
-    //% group="Signal"
+    //% group="Initialization"
     //% weight=44 
     //% block="StartRecordingECG"
     export function startRecordingECG(): void {
@@ -141,12 +124,31 @@ namespace neurobit {
             })
         }
     }
+
+    /**
+ * Start recording EEG signal
+ */
+
+    //% group="Initialization"
+    //% weight=43 
+    //% block="StartRecordingEEG"
+    export function startRecordingEEG(): void {
+        signalType = Signal.EEG;
+        pins.digitalWritePin(DigitalPin.P5, 0)
+        pins.digitalWritePin(DigitalPin.P6, 0)
+        if (notInitialized) {
+            control.inBackground(() => {
+                backgroundTask()
+            })
+        }
+    }
+
     /**
      * Return last measured value of the signal
      */
 
-    //% group="Signal"
-    //% weight=50 
+    //% group="Raw data"
+    //% weight=42
     //% block="getSignal"
     export function getSignal(): number {
         if (buffer.length>0)
@@ -160,11 +162,22 @@ namespace neurobit {
     }
 
     /**
+     * Return two seconds of recorded signal
+     */
+
+    //% group="Raw data"
+    //% weight=41 
+    //% block="getBuffer"
+    export function getBuffer(): number[] {
+        return buffer;
+    }
+
+    /**
          * Return last envelope value
          */
 
-    //% group="Signal"
-    //% weight=44
+    //% group="Processed data"
+    //% weight=40
     //% block="getEnvelope"
     export function getEnvelope(): number {
         return envelopeValue;
@@ -174,23 +187,23 @@ namespace neurobit {
          * Return heart rate
          */
 
-    //% group="Signal"
-    //% weight=43
+    //% group="Processed data"
+    //% weight=39
     //% block="getHeartRate"
     export function getHeartRate(): number {
         return bpmECG;
     }
 
-
     /**
-     * Return two seconds of recorded signal
-     */
+         * Return alpha waves power
+         */
 
-    //% group="Signal"
-    //% weight=47 
-    //% block="getBuffer"
-    export function getBuffer(): number[] {
-        return buffer;
+    //% group="Processed data"
+    //% weight=38
+    //% block="getAlphaWaves"
+    export function getAlphaWaves(): number {
+        return 0;
     }
+
 
 }
