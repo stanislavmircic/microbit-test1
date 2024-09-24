@@ -14,7 +14,7 @@ namespace neurobit {
     let signalType: Signal = Signal.EMG
     let notInitialized = 1
     let envelopeValue:number = 0
-    let tempCaluclationValue:number = 0
+    let tempCalculationValue:number = 0
     let lastSample = 0
     let bpmECG:number = 0
     const MAX_BUFFER_SIZE = 500;
@@ -22,21 +22,90 @@ namespace neurobit {
     const ENVELOPE_DECAY = 2;
     const ECG_JUMP = 40
     const DEBOUNCE_PERIOD_ECG = 300
-    
+
+
+    // Filter coefficients: [b0, b1, b2, a1, a2]
+    let coefficients: number[] = [0, 0, 0, 0, 0];
+
+    // Buffers to keep the last two input and output samples
+    let gInputKeepBuffer: number[] = [0, 0];
+    let gOutputKeepBuffer: number[] = [0, 0];
+
+    // Filter parameters
+    const SAMPLING_RATE: number = 250;       // Hz
+    const ALPHA_WAVE_FREQUENCY: number = 10;     // Hz (Notch frequency)
+    const Q: number = 1;                   // Quality factor
+    const BASELINE_ALPHA:number = 20;
+
+    let eegSignalPower:number = 0;
+    let eegNotchedSignalPower:number = 0;
+    let filteredValue:number = 0;
+    let eegAlphaPower:number = 0;
+
+    /**
+     * Calculate intermediate variables and set filter coefficients
+     */
+    function calculateNotchCoefficients(Fc: number, Q: number, Fs: number): void {
+        const omega = (2 * Math.PI * Fc) / Fs;
+        const omegaS = Math.sin(omega);
+        const omegaC = Math.cos(omega);
+        const alpha = omegaS / (2 * Q);
+
+        const a0 = 1 + alpha;
+        const b0 = 1 / a0;
+        const b1 = (-2 * omegaC) / a0;
+        const b2 = 1 / a0;
+        const a1 = (-2 * omegaC) / a0;
+        const a2 = (1 - alpha) / a0;
+
+        // Set the coefficients array
+        coefficients[0] = b0;
+        coefficients[1] = b1;
+        coefficients[2] = b2;
+        coefficients[3] = a1;
+        coefficients[4] = a2;
+    }
+
+
+
+    /**
+  * Filter a single input sample and return the filtered output
+  * @param inputValue The input sample to be filtered
+  * @returns The filtered output sample
+  */
+    export function filterSingleSample(inputValue: number): number {
+        // Compute the filtered output using the difference equation:
+        // y[n] = b0*x[n] + b1*x[n-1] + b2*x[n-2] - a1*y[n-1] - a2*y[n-2]
+        const y = (coefficients[0] * inputValue) +
+            (coefficients[1] * gInputKeepBuffer[0]) +
+            (coefficients[2] * gInputKeepBuffer[1]) -
+            (coefficients[3] * gOutputKeepBuffer[0]) -
+            (coefficients[4] * gOutputKeepBuffer[1]);
+
+        // Update the input buffer (shift the samples)
+        gInputKeepBuffer[1] = gInputKeepBuffer[0]; // x[n-2] = x[n-1]
+        gInputKeepBuffer[0] = inputValue;           // x[n-1] = x[n]
+
+        // Update the output buffer (shift the samples)
+        gOutputKeepBuffer[1] = gOutputKeepBuffer[0]; // y[n-2] = y[n-1]
+        gOutputKeepBuffer[0] = y;                     // y[n-1] = y[n]
+
+        return y | 0;
+    }
 
     // Define your background function
     function backgroundTask(): void {
         while (true) {
             pins.digitalWritePin(DigitalPin.P2, 1)
-            lastSample = tempCaluclationValue
-            tempCaluclationValue = pins.analogReadPin(AnalogPin.P0)
-            buffer.push(tempCaluclationValue);
+            lastSample = tempCalculationValue
+            tempCalculationValue = pins.analogReadPin(AnalogPin.P0)
+            buffer.push(tempCalculationValue);
             if (buffer.length > MAX_BUFFER_SIZE) {
                 buffer.removeAt(0)
             }
             if (signalType == Signal.ECG)
             {
-                if((tempCaluclationValue-lastSample)>ECG_JUMP)
+                if ((tempCalculationValue-lastSample)>ECG_JUMP)
                 {
                     let currentMillis = control.millis()
                     if (ecgTimestamps.length>0)
@@ -61,12 +130,12 @@ namespace neurobit {
             }
             else if (signalType == Signal.EMG)
             {
-                tempCaluclationValue = tempCaluclationValue - NOISE_FLOOR;
-                if (tempCaluclationValue>0)
+                tempCalculationValue = tempCalculationValue - NOISE_FLOOR;
+                if (tempCalculationValue>0)
                 {
-                    if (tempCaluclationValue > envelopeValue)
+                    if (tempCalculationValue > envelopeValue)
                     {
-                        envelopeValue = tempCaluclationValue;
+                        envelopeValue = tempCalculationValue;
                     }                    
                 }
                 
@@ -79,8 +148,16 @@ namespace neurobit {
             }
             else if (signalType = Signal.EEG)
             {
-
+                eegSignalPower = eegSignalPower * 0.99 +0.01* (Math.abs(tempCalculationValue-512))
+                filteredValue = filterSingleSample(tempCalculationValue)
+                eegNotchedSignalPower = eegNotchedSignalPower * 0.99 + 0.01 * (Math.abs(filteredValue - 512))
+                eegAlphaPower = (eegSignalPower - eegNotchedSignalPower) - BASELINE_ALPHA;
+                if (eegAlphaPower<0)
+                {
+                    eegAlphaPower = 0;
+                }
             }
+
             pins.digitalWritePin(DigitalPin.P2, 0)
             basic.pause(0)
         }
@@ -134,6 +211,7 @@ namespace neurobit {
     //% block="StartRecordingEEG"
     export function startRecordingEEG(): void {
         signalType = Signal.EEG;
+        calculateNotchCoefficients(ALPHA_WAVE_FREQUENCY, Q, SAMPLING_RATE);
         pins.digitalWritePin(DigitalPin.P8, 0)
         pins.digitalWritePin(DigitalPin.P9, 0)
         if (notInitialized) {
@@ -202,7 +280,7 @@ namespace neurobit {
     //% weight=38
     //% block="getAlphaWaves"
     export function getAlphaWaves(): number {
-        return 0;
+        return eegAlphaPower;
     }
 
 
