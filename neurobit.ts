@@ -98,8 +98,9 @@ namespace neurobit {
         while (true) {
             pins.digitalWritePin(DigitalPin.P2, 1)
             lastSample = tempCalculationValue
-            tempCalculationValue = pins.analogReadPin(AnalogPin.P0)
+            tempCalculationValue = pins.analogReadPin(AnalogPin.P1)
             buffer.push(tempCalculationValue);
+
             if (buffer.length > MAX_BUFFER_SIZE) {
                 buffer.removeAt(0)
             }

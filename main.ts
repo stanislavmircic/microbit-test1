@@ -5,7 +5,5 @@ neurobit.startRecordingEEG()
 basic.forever(function () {
     pins.digitalWritePin(DigitalPin.P1, 1)
     test = neurobit.getAlphaWaves()
-    serial.writeNumber(test)
-    serial.writeLine("")
     pins.digitalWritePin(DigitalPin.P1, 0)
 })
